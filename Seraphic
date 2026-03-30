@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#030106">
+    <title>SERAPHIC // V12 OMNI</title>
+    
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlNFUkFQSElDIFYxMiIsCiAgInNob3J0X25hbWUiOiAiU0VSQVBISUMiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzAzMDEwNiIsCiAgInRoZW1lX2NvbG9yIjogIiNiYzY2ZmYiCn0=">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --accent: #bc66ff; --bg: #030106; --panel: rgba(10, 7, 18, 0.98); --border: rgba(255, 255, 255, 0.1); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: #fff; font-family: 'Outfit', sans-serif; height: 100dvh; width: 100vw; overflow: hidden; position: fixed; }
+        
+        #visualizer { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+        #pip-bridge { position: fixed; top: -1000px; width: 10px; height: 10px; opacity: 0; pointer-events: none; }
+        #yt-wrapper { position: fixed; top: -1000px; left: -1000px; width: 300px; height: 300px; opacity: 0.01; pointer-events: none; background: #000; z-index: 9999; }
+
+        .app-shell { display: grid; grid-template-columns: 380px 1fr; height: 100dvh; position: relative; z-index: 10; }
+        @media (max-width: 1024px) { .app-shell { grid-template-columns: 1fr; } }
+        
+        .sidebar { background: var(--panel); backdrop-filter: blur(40px); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 2000; transition: 0.4s ease; }
+        @media (max-width: 1024px) { .sidebar { position: absolute; inset: 0; transform: translateX(-100%); width: 100%; } .sidebar.active { transform: translateX(0); } }
+        
+        .tabs { display: flex; gap: 5px; margin-bottom: 5px; }
+        .tab-btn { flex: 1; padding: 12px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: #fff; border-radius: 10px; cursor: pointer; font-size: 0.6rem; font-weight: 900; text-transform: uppercase; }
+        .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        
+        input#query { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 15px; border-radius: 12px; color: #fff; font-size: 0.9rem; margin-bottom: 10px; }
+        .scroll-area { flex: 1; overflow-y: auto; padding-right: 5px; }
+        .scroll-area::-webkit-scrollbar { width: 2px; }
+        .scroll-area::-webkit-scrollbar-thumb { background: var(--accent); }
+
+        .track-card { padding: 12px; margin-bottom: 8px; border-radius: 15px; background: rgba(255,255,255,0.02); display: flex; align-items: center; gap: 12px; cursor: pointer; border: 1px solid transparent; position: relative; transition: 0.2s; }
+        .track-card.active { border-color: var(--accent); background: rgba(188, 102, 255, 0.08); }
+        .track-thumb { width: 45px; height: 45px; border-radius: 8px; object-fit: cover; }
+        
+        .fav-toggle-btn { background: none; border: none; color: rgba(255,255,255,0.2); font-size: 1.1rem; cursor: pointer; padding: 5px; transition: 0.3s; z-index: 5; }
+        .fav-toggle-btn.is-fav { color: #ff4477; text-shadow: 0 0 10px #ff4477; }
+
+        .dev-credits { border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px; }
+        .dev-link { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-size: 0.65rem; font-weight: 600; margin-bottom: 8px; opacity: 0.7; transition: 0.3s; }
+        .dev-link:hover { opacity: 1; color: var(--accent); }
+
+        .stage { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        #main-artwork { width: 280px; height: 280px; border-radius: 30px; background: #111 center/cover; box-shadow: 0 30px 60px rgba(0,0,0,0.8); margin-bottom: 30px; border: 1px solid var(--border); position: relative; }
+        
+        #status-hud { font-size: 0.55rem; font-weight: 900; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; }
+
+        .dock { width: 90%; max-width: 440px; background: var(--panel); border: 1px solid var(--border); border-radius: 25px; padding: 25px; backdrop-filter: blur(20px); }
+        .progress-wrap { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; cursor: pointer; margin-bottom: 20px; position: relative; overflow: hidden; }
+        #progress-bar { height: 100%; width: 0%; background: var(--accent); box-shadow: 0 0 15px var(--accent); }
+        
+        .controls { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+        .c-btn { background: none; border: none; color: #fff; font-weight: 900; cursor: pointer; font-size: 0.6rem; letter-spacing: 1px; }
+        #play-btn { width: 60px; height: 60px; border-radius: 50%; background: #fff; color: #000; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        
+        #sync-trigger { position: absolute; top: 30px; right: 30px; border: 2px solid var(--accent); color: var(--accent); background: rgba(188, 102, 255, 0.1); padding: 12px 20px; border-radius: 12px; font-size: 0.7rem; font-weight: 900; cursor: pointer; z-index: 3000; }
+        .toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 12px 30px; border-radius: 50px; font-weight: 900; z-index: 9999; transition: 0.4s; font-size: 0.7rem; }
+        .toast.show { top: 30px; }
+    </style>
+</head>
+<body>
+    <canvas id="visualizer"></canvas>
+    <video id="pip-bridge" playsinline muted autoplay loop></video>
+    <audio id="silent-anchor" loop preload="auto"><source src="data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==" type="audio/wav"></audio>
+    
+    <div id="yt-wrapper"><div id="player"></div></div>
+    <div id="toast" class="toast">SYSTEM INITIALIZED</div>
+
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-charts" onclick="Core.switchTab('charts')">Hot 100</button>
+                <button class="tab-btn" id="tab-search" onclick="Core.switchTab('search')">Search</button>
+                <button class="tab-btn" id="tab-favs" onclick="Core.switchTab('favs')">Library</button>
+            </div>
+            <input type="text" id="query" placeholder="Search music..." oninput="Core.runSearch(this.value)">
+            <div class="scroll-area" id="list-render"></div>
+            
+            <button onclick="UI.installPWA()" style="width:100%; padding:15px; margin-bottom: 8px; background:var(--accent); color:#000; border-radius:12px; border:none; font-weight:900; cursor:pointer; font-size: 0.65rem;">INSTALL APP</button>
+            
+            <div class="dev-credits">
+                <a href="https://www.instagram.com/ilehvin?igsh=OXFjc2cxNTNhM3F1&utm_source=qr" target="_blank" class="dev-link">INSTAGRAM: @ilehvin</a>
+                <div class="dev-link">DISCORD: ilehvin</div>
+            </div>
+
+            <button onclick="UI.toggleMenu()" style="width:100%; padding:15px; margin-top: 10px; background:rgba(255,255,255,0.05); color:#fff; border-radius:12px; border:none; font-weight:900; cursor:pointer; font-size: 0.65rem;">BACK TO PLAYER</button>
+        </aside>
+
+        <main class="stage">
+            <button onclick="UI.toggleMenu()" style="position: absolute; top: 30px; left: 30px; background: none; border: 1px solid var(--border); color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 0.6rem; font-weight: 900; cursor:pointer; z-index: 10;">MENU</button>
+            <button id="sync-trigger" onclick="Core.syncEngine()">ACTIVATE ENGINE</button>
+            
+            <div id="main-artwork"></div>
+            <div style="text-align: center; margin-bottom: 30px; width: 85%;">
+                <h2 id="meta-title" style="margin: 0; font-size: 1.6rem; text-shadow: 0 0 20px rgba(188, 102, 255, 0.4);">SERAPHIC</h2>
+                <div id="meta-artist" style="color: var(--accent); font-size: 0.75rem; font-weight: 800; letter-spacing: 3px; margin-top: 8px; text-transform: uppercase;">Awaiting Sync</div>
+                <div id="status-hud">VISUALIZER: READY</div>
+            </div>
+
+            <div class="dock">
+                <div class="progress-wrap" onclick="Core.seek(event)"><div id="progress-bar"></div></div>
+                <div class="controls">
+                    <button onclick="Core.prev()" class="c-btn">PREV</button>
+                    <button id="pip-btn" onclick="Core.togglePiP()" class="c-btn" style="color: var(--accent);">PIP: OFF</button>
+                    <button id="play-btn" onclick="Core.toggle()" class="c-btn">PLAY</button>
+                    <button id="awake-btn" onclick="Core.toggleAwake()" class="c-btn" style="color: #44ffaa;">AWAKE: OFF</button>
+                    <button onclick="Core.next()" class="c-btn">NEXT</button>
+                    <button id="main-fav-btn" onclick="Core.toggleFav(Core.currentTrack)" class="c-btn" style="font-size: 1.5rem;">❤</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        const Core = {
+            player: null, playlist: [], charts: [], 
+            favorites: JSON.parse(localStorage.getItem('seraph_v12_favs') || '[]'),
+            index: 0, tab: 'charts', playing: false, synced: false,
+            currentTrack: null, activeQueue: [], pipEnabled: false, 
+            wakeLock: null, streamRef: null, watchdog: null, transitionMode: false,
+
+            init() {
+                window.onYouTubeIframeAPIReady = () => {
+                    this.player = new YT.Player('player', {
+                        height: '100%', width: '100%', 
+                        playerVars: { 'autoplay': 1, 'controls': 0, 'playsinline': 1, 'enablejsapi': 1, 'rel': 0, 'origin': window.location.origin },
+                        events: { 
+                            'onReady': () => { this.loadCharts(); Visualizer.setup(); UI.notify("SYSTEM READY"); this.initMediaSession(); }, 
+                            'onStateChange': (e) => this.onState(e),
+                            'onError': () => this.next()
+                        }
+                    });
+                };
+
+                this.watchdog = setInterval(() => {
+                    if (this.playing && !this.transitionMode && this.player) {
+                        const state = this.player.getPlayerState();
+                        if (state !== 1 && state !== 3 && state !== -1) {
+                            this.player.playVideo();
+                        }
+                    }
+                }, 1000);
+
+                // Fix for Tabbing back in: ensure PiP bridge is still playing
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible' && this.pipEnabled) {
+                        document.getElementById('pip-bridge').play().catch(()=>{});
+                    }
+                });
+            },
+
+            initMediaSession() {
+                if ('mediaSession' in navigator) {
+                    navigator.mediaSession.setActionHandler('play', () => this.toggle());
+                    navigator.mediaSession.setActionHandler('pause', () => this.toggle());
+                    navigator.mediaSession.setActionHandler('previoustrack', () => this.prev());
+                    navigator.mediaSession.setActionHandler('nexttrack', () => this.next());
+                }
+            },
+
+            haptic() { if (navigator.vibrate) navigator.vibrate(10); },
+
+            async toggleAwake() {
+                this.haptic();
+                if (this.wakeLock) {
+                    try { await this.wakeLock.release(); } catch(e) {}
+                    this.wakeLock = null;
+                    document.getElementById('awake-btn').innerText = "AWAKE: OFF";
+                    return;
+                }
+                try {
+                    if ('wakeLock' in navigator) this.wakeLock = await navigator.wakeLock.request('screen');
+                    document.getElementById('awake-btn').innerText = "AWAKE: ON";
+                } catch (e) {}
+            },
+
+            syncEngine() {
+                this.haptic();
+                if(!this.player) return;
+                this.player.unMute();
+                this.player.playVideo();
+                document.getElementById('silent-anchor').play().catch(() => {});
+                this.synced = true;
+                document.getElementById('sync-trigger').style.display = 'none';
+            },
+
+            async loadCharts() {
+                try {
+                    const res = await fetch('https://itunes.apple.com/us/rss/topsongs/limit=50/json');
+                    const data = await res.json();
+                    this.charts = data.feed.entry.map(e => ({
+                        title: e['im:name'].label, artist: e['im:artist'].label,
+                        thumb: e['im:image'][2].label.replace('170x170', '600x600')
+                    }));
+                    this.activeQueue = this.charts;
+                    this.render();
+                } catch(e) {}
+            },
+
+            async runSearch(q) {
+                if(q.length < 3) return;
+                this.tab = 'search'; UI.updateTabUI();
+                clearTimeout(this.st);
+                this.st = setTimeout(async () => {
+                    const r = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=30`);
+                    const d = await r.json();
+                    this.playlist = d.results.map(i => ({
+                        title: i.trackName, artist: i.artistName,
+                        thumb: i.artworkUrl100.replace('100x100', '600x600')
+                    }));
+                    this.render();
+                }, 500);
+            },
+
+            async resolveVideoId(track) {
+                const query = encodeURIComponent(`${track.artist} ${track.title} official audio`);
+                try {
+                    const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://www.youtube.com/results?search_query=' + query)}`);
+                    const text = await res.text();
+                    const match = text.match(/"videoId":"([^"]{11})"/);
+                    return match ? match[1] : null;
+                } catch (e) { return null; }
+            },
+
+            async togglePiP() {
+                this.haptic();
+                const video = document.getElementById('pip-bridge');
+                if (!document.pictureInPictureElement) {
+                    try {
+                        if (!this.streamRef) {
+                            const canvas = document.getElementById('visualizer');
+                            // Capture at 30fps but with manual frame request for background persistence
+                            this.streamRef = canvas.captureStream(30);
+                        }
+                        video.srcObject = this.streamRef;
+                        await video.play();
+                        await video.requestPictureInPicture();
+                        this.pipEnabled = true;
+                        document.getElementById('pip-btn').innerText = "PIP: ON";
+                    } catch (e) { UI.notify("PIP FAILED: TAP PAGE FIRST"); }
+                } else { 
+                    if (document.exitPictureInPicture) document.exitPictureInPicture();
+                }
+            },
+
+            async playTrack(i, listToPlay) {
+                this.haptic();
+                // CRITICAL PIP FIX: Keep the bridge alive during track lookup
+                if(this.pipEnabled) {
+                    document.getElementById('pip-bridge').play().catch(()=>{});
+                }
+                
+                this.transitionMode = true;
+                const list = listToPlay || this.activeQueue;
+                if (!list.length) return;
+                this.activeQueue = list;
+                this.index = (i + list.length) % list.length;
+                const t = list[this.index];
+                this.currentTrack = t; 
+
+                document.getElementById('meta-title').innerText = t.title;
+                document.getElementById('meta-artist').innerText = t.artist;
+                document.getElementById('main-artwork').style.backgroundImage = `url(${t.thumb})`;
+
+                const vid = await this.resolveVideoId(t);
+                if(vid && this.player) {
+                    this.player.loadVideoById(vid);
+                    this.render();
+                    
+                    if ('mediaSession' in navigator) {
+                        navigator.mediaSession.metadata = new MediaMetadata({
+                            title: t.title, artist: t.artist,
+                            artwork: [{ src: t.thumb, sizes: '512x512', type: 'image/jpeg' }]
+                        });
+                        navigator.mediaSession.playbackState = "playing";
+                    }
+                    document.getElementById('silent-anchor').play().catch(() => {});
+                    setTimeout(() => { this.transitionMode = false; }, 1500);
+                } else { this.next(); }
+            },
+
+            onState(e) {
+                this.playing = (e.data === 1);
+                document.getElementById('play-btn').innerText = this.playing ? "PAUSE" : "PLAY";
+                
+                // Keep the bridge playing whenever YouTube is playing
+                if(this.playing && this.pipEnabled) {
+                    document.getElementById('pip-bridge').play().catch(()=>{});
+                }
+                
+                if(e.data === 0) { 
+                    this.next(); 
+                }
+                
+                clearInterval(this.pI);
+                if(this.playing) {
+                    this.pI = setInterval(() => {
+                        if (!this.player) return;
+                        const dur = this.player.getDuration();
+                        const cur = this.player.getCurrentTime();
+                        if(dur > 0) {
+                            document.getElementById('progress-bar').style.width = (cur/dur)*100 + '%';
+                            if (dur - cur < 1.0) {
+                                clearInterval(this.pI);
+                                this.next();
+                            }
+                        }
+                    }, 1000);
+                }
+            },
+
+            toggle() { this.haptic(); this.playing ? this.player.pauseVideo() : this.player.playVideo(); },
+            next() { this.playTrack(this.index + 1, this.activeQueue); },
+            prev() { this.playTrack(this.index - 1, this.activeQueue); },
+            seek(e) {
+                const r = e.currentTarget.getBoundingClientRect();
+                const p = (e.clientX - r.left)/r.width;
+                if(this.player) this.player.seekTo(p * this.player.getDuration());
+            },
+            switchTab(t) { this.haptic(); this.tab = t; UI.updateTabUI(); this.render(); },
+            getActiveList() { return this.tab === 'favs' ? this.favorites : (this.tab === 'search' ? this.playlist : this.charts); },
+            toggleFav(track, event) {
+                if(event) event.stopPropagation();
+                this.haptic();
+                if(!track) return;
+                const key = track.title + track.artist;
+                const idx = this.favorites.findIndex(f => (f.title + f.artist) === key);
+                if(idx > -1) this.favorites.splice(idx, 1);
+                else this.favorites.unshift(track);
+                localStorage.setItem('seraph_v12_favs', JSON.stringify(this.favorites));
+                this.render();
+            },
+
+            render() {
+                const list = this.getActiveList();
+                const container = document.getElementById('list-render');
+                container.innerHTML = "";
+                list.forEach((t, i) => {
+                    const active = this.currentTrack && this.currentTrack.title === t.title;
+                    const isFav = this.favorites.some(f => f.title + f.artist === t.title + t.artist);
+                    const card = document.createElement('div');
+                    card.className = `track-card ${active ? 'active' : ''}`;
+                    card.onclick = () => { this.playTrack(i, list); };
+                    card.innerHTML = `<img src="${t.thumb}" class="track-thumb"><div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${t.title}</div><div style="font-size:0.6rem; color:#888;">${t.artist}</div></div><button class="fav-toggle-btn ${isFav ? 'is-fav' : ''}" onclick="Core.toggleFav(Core.getActiveList()[${i}], event)">❤</button>`;
+                    container.appendChild(card);
+                });
+                if(this.currentTrack) {
+                    const mainFav = this.favorites.some(f => f.title + f.artist === this.currentTrack.title + this.currentTrack.artist);
+                    document.getElementById('main-fav-btn').style.color = mainFav ? "#ff4477" : "#fff";
+                }
+            }
+        };
+
+        const Visualizer = {
+            canvas: null, ctx: null, stars: [],
+            setup() {
+                this.canvas = document.getElementById('visualizer');
+                this.ctx = this.canvas.getContext('2d', {alpha: false});
+                this.resize();
+                for(let i=0; i<85; i++) { this.stars.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, s: Math.random() * 2 + 1, o: Math.random() * Math.PI * 2 }); }
+                this.draw();
+                
+                document.getElementById('pip-bridge').addEventListener('leavepictureinpicture', () => {
+                    Core.pipEnabled = false;
+                    document.getElementById('pip-btn').innerText = "PIP: OFF";
+                });
+            },
+            resize() { this.canvas.width = innerWidth; this.canvas.height = innerHeight; },
+            draw() {
+                this.ctx.fillStyle = '#030106';
+                this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+                
+                // Frame push: stars always move if PiP is active, regardless of playback state
+                const speed = (Core.playing || Core.transitionMode || Core.pipEnabled) ? 3.0 : 0.4;
+                const bounce = (Core.playing || Core.transitionMode) ? Math.sin(Date.now() / 150) * 5 : 0;
+                
+                this.stars.forEach(s => {
+                    this.ctx.beginPath();
+                    this.ctx.fillStyle = `rgba(188, 102, 255, ${0.45 + Math.sin(Date.now()/800 + s.o) * 0.3})`;
+                    this.ctx.arc(s.x, s.y + bounce, s.s + (bounce/6), 0, Math.PI * 2);
+                    this.ctx.fill();
+                    s.y -= speed;
+                    if(s.y < -25) s.y = innerHeight + 25;
+                });
+                
+                // High-priority draw for PiP stability
+                if (document.hidden) {
+                    setTimeout(() => this.draw(), 33); // 30fps background forced
+                } else {
+                    requestAnimationFrame(() => this.draw());
+                }
+            }
+        };
+
+        const UI = {
+            deferredPrompt: null,
+            initInstall() { window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.deferredPrompt = e; }); },
+            installPWA() {
+                Core.haptic();
+                if (this.deferredPrompt) {
+                    this.deferredPrompt.prompt();
+                } else { UI.notify("IOS: TAP SHARE -> ADD TO HOME SCREEN"); }
+            },
+            notify(m) { const t = document.getElementById('toast'); t.innerText = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); },
+            toggleMenu() { Core.haptic(); document.getElementById('sidebar').classList.toggle('active'); },
+            updateTabUI() { document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'tab-' + Core.tab)); }
+        };
+
+        Core.init();
+        UI.initInstall();
+     window.addEventListener('resize', () => Visualizer.resize());
+    </script>
+</body>
+</html>
