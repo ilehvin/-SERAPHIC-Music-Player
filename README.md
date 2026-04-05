@@ -28,5 +28,5 @@ Open the website in Chrome or Microsoft Edge best working for edge.
 paste the browser link 
 Click the Install icon (a monitor with a down arrow) in the right side of the address bar.
 Alternatively, open the browser menu (three dots) and select more tools or cast, save, share and look for "Install as app" 
-link to music player http://seraphicmusicapp.xo.je/?i=1
+link to music player http://seraphicmusicapp.xo.je
 Developer: @ilehvin
