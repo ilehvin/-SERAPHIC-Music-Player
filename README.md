@@ -1,4 +1,4 @@
-🌌 SERAPHIC // V12 OMNI
+🌌 SERAPHIC // Music Player
 A high-performance, minimalist music interface built for background multitasking and Picture-in-Picture (PiP) stability.
 
 🛠 Key Features
